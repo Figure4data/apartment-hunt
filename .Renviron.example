@@ -1,10 +1,16 @@
 # Google Sheet ID (used when no URL is pasted in the app UI)
 SHEET_ID=your_sheet_id_here
 
-# Service account JSON — either a file path or the raw JSON string contents
-# File path example:
-#   GCP_SA_JSON=/Users/you/.config/gcp/apartment-hunt-sa.json
-# Raw JSON string example (Connect Cloud) — must include the outer { } braces,
-# be on a single line, and have no surrounding quotes:
-#   GCP_SA_JSON={"type":"service_account","project_id":"...","private_key":"..."}
+# Local OAuth client for googlesheets4 / gargle
+# For desktop / installed app OAuth, use these two values:
+clientID=
+clientSecret=
+
+# Optional: set to installed or web (default: installed)
+clientType=installed
+
+# Optional: only needed for web OAuth clients; comma-separated exact redirect URIs
+# clientRedirectUris=http://localhost:1410/,http://localhost:1410
+
+# Service account JSON is still used for deployed environments only
 GCP_SA_JSON=

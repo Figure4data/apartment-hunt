@@ -16,6 +16,35 @@ TABLE_COLS <- c("Apartment", "Status", "Rent", "Ttl_Cost", "Value_Cost",
 
 server <- function(input, output, session) {
 
+  auth_ready <- reactiveVal(googlesheets4::gs4_has_token())
+
+  output$google_auth_status <- renderText({
+    if (auth_ready() && googlesheets4::gs4_has_token()) {
+      paste("Connected as", googlesheets4::gs4_user())
+    } else {
+      "Not connected"
+    }
+  })
+
+  observeEvent(input$connect_google, {
+    tryCatch({
+      gs4_auth_sa()
+      auth_ready(TRUE)
+      showNotification(
+        paste("Connected as", googlesheets4::gs4_user()),
+        type = "message",
+        duration = 5
+      )
+    }, error = function(e) {
+      auth_ready(FALSE)
+      showNotification(
+        paste("Google auth failed:", conditionMessage(e)),
+        type = "error",
+        duration = 10
+      )
+    })
+  })
+
   # ── Resolve sheet ID ────────────────────────────────────────────────────────
   # Extracts bare sheet ID from a full URL or returns the string unchanged
   # if it's already a bare ID.
@@ -49,6 +78,7 @@ server <- function(input, output, session) {
 
   # ── Fetch + geocode (triggered by reload button) ─────────────────────────────
   apt_data <- eventReactive(input$reload, {
+    req(auth_ready())
     req(sheet_id())
     withProgress(message = "Loading sheet...", value = 0.2, {
       df <- fetch_sheet(sheet_id())
@@ -68,6 +98,7 @@ server <- function(input, output, session) {
 
   # ── Fetch + geocode Essentials (same reload trigger) ─────────────────────────
   essentials_data <- eventReactive(input$reload, {
+    req(auth_ready())
     req(sheet_id())
     tryCatch({
       df <- fetch_essentials(sheet_id())
@@ -159,6 +190,7 @@ server <- function(input, output, session) {
 
   # ── Fetch + geocode Zones (same reload trigger) ─────────────────────────────
   zones_data <- eventReactive(input$reload, {
+    req(auth_ready())
     req(sheet_id())
     tryCatch({
       df <- fetch_zones(sheet_id())

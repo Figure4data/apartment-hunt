@@ -1,25 +1,44 @@
 library(googlesheets4)
 library(dplyr)
 
-#' Authenticate with Google Sheets using a service account JSON.
-#' Locally: set GCP_SA_JSON to the file path of the JSON.
-#' On Connect Cloud: set GCP_SA_JSON to the raw JSON string contents.
+#' Authenticate with Google Sheets using the user's OAuth client.
+#'
+#' The OAuth client ID and secret are read from `clientID` and `clientSecret`
+#' in `.Renviron`. For local development, use a Desktop app / installed-app
+#' OAuth client. If you use a web client, also set `clientRedirectUris` to the
+#' exact redirect URI(s) configured in Google Cloud Console.
 gs4_auth_sa <- function() {
-  sa <- Sys.getenv("GCP_SA_JSON")
-  if (nchar(sa) == 0) stop("GCP_SA_JSON environment variable is not set.")
+  client_id <- trimws(Sys.getenv("clientID"))
+  client_secret <- trimws(Sys.getenv("clientSecret"))
+  client_type <- tolower(trimws(Sys.getenv("clientType", unset = "installed")))
+  redirect_uris_raw <- trimws(Sys.getenv("clientRedirectUris"))
 
-  if (file.exists(sa)) {
-    # Local dev: sa is a file path
-    gs4_auth(path = sa)
-  } else {
-    # Connect Cloud: sa is the raw JSON string.
-    # Write to a temp file that persists for the R process lifetime —
-    # do NOT unlink it, as gargle may read it lazily on the first API call.
-    sa <- trimws(sa)
-    tmp <- tempfile(fileext = ".json")
-    cat(sa, file = tmp, sep = "")
-    gs4_auth(path = tmp)
+  if (nchar(client_id) == 0 || nchar(client_secret) == 0) {
+    stop("clientID and clientSecret must be set in .Renviron.")
   }
+
+  redirect_uris <- if (identical(client_type, "web")) {
+    if (nchar(redirect_uris_raw) > 0) {
+      strsplit(redirect_uris_raw, "\\s*,\\s*")[[1]]
+    } else {
+      c("http://localhost:1410/", "http://localhost:1410")
+    }
+  } else if (nchar(redirect_uris_raw) > 0) {
+    strsplit(redirect_uris_raw, "\\s*,\\s*")[[1]]
+  } else {
+    NULL
+  }
+
+  client <- gargle::gargle_oauth_client(
+    id = client_id,
+    secret = client_secret,
+    type = if (client_type %in% c("web", "installed")) client_type else "installed",
+    redirect_uris = redirect_uris,
+    name = "apartment-hunt"
+  )
+
+  gs4_auth_configure(client = client)
+  gs4_auth()
 }
 
 #' Read the apartment listings sheet.

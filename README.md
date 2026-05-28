@@ -3,7 +3,7 @@ Decision support for apartment hunting — a Shiny app that reads apartment list
 
 ## What it does
 
-- **Loads listings from a Google Sheet** — authenticated via a GCP service account. The sheet URL can be overridden at runtime by pasting it into the app UI, otherwise the `SHEET_ID` environment variable is used.
+- **Loads listings from a Google Sheet** — authenticated via a Google OAuth client for local development. The sheet URL can be overridden at runtime by pasting it into the app UI, otherwise the `SHEET_ID` environment variable is used.
 - **Geocodes addresses automatically** — new addresses (rows where `lat`/`lng` are blank) are geocoded via OpenStreetMap using `tidygeocoder`, with ", Vancouver, BC, Canada" appended for accuracy. Results are written back to the `lat` and `lng` columns of the Google Sheet so geocoding only runs for new rows on subsequent loads.
 - **Displays an interactive leaflet map** with markers encoding:
   - **Colour** → `Status` (open=blue, tour=green, msg=amber, unavail=grey, denied=red, reject=dark red)
@@ -22,7 +22,7 @@ apartment-hunt/
 ├── ui.R                    # bslib sidebar layout and all controls
 ├── server.R                # Reactive chain: fetch → geocode → filter → render
 ├── R/
-│   ├── fetch_sheet.R       # Google Sheets auth (service account) and data read
+│   ├── fetch_sheet.R       # Google Sheets auth and data read
 │   ├── geocode_writeback.R # Incremental geocoding; writes lat/lng back to sheet
 │   └── build_map.R         # leaflet map builder (colour, shape, size, popups)
 ├── renv.lock               # Pinned R package versions
@@ -59,8 +59,11 @@ The sheet is expected to have headers at **row 8**, with at minimum the followin
 1. Copy `.Renviron.example` to `.Renviron` and fill in:
    ```
    SHEET_ID=<your_google_sheet_id>
-   GCP_SA_JSON=/path/to/service-account.json
+  clientID=<oauth_client_id>
+  clientSecret=<oauth_client_secret>
+  clientType=installed
    ```
+  If you created a web OAuth client instead, add `clientRedirectUris` with the exact redirect URI(s) registered in Google Cloud Console.
 2. Restore packages: `renv::restore()`
 3. Run: `shiny::runApp()`
 
@@ -70,7 +73,7 @@ Deployment is triggered automatically on push to `main` via a linked GitHub repo
 
 1. In the Connect Cloud project settings → **Environment Variables**, set:
    - `SHEET_ID` — bare Google Sheet ID
-   - `GCP_SA_JSON` — contents of the service account JSON as a **single-line string**
+  - `GCP_SA_JSON` — contents of the service account JSON as a **single-line string**
 2. Ensure `manifest.json` is up to date: `rsconnect::writeManifest()`
 3. The service account requires read/write access to the Google Sheet (`spreadsheets` scope — not readonly, as the app writes geocoded coordinates back).
 
