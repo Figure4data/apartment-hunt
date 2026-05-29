@@ -10,11 +10,45 @@ source("R/geocode_essentials.R")
 source("R/fetch_zones.R")
 source("R/build_map.R")
 
-# Columns shown in the summary table
-TABLE_COLS <- c("Apartment", "Status", "Rent", "Ttl_Cost", "Value_Cost",
-                "Parking_EV", "Laundry", "Gym", "Storage", "Amenities", "Notes")
-
 server <- function(input, output, session) {
+
+  auth_ready <- reactiveVal(googlesheets4::gs4_has_token())
+
+  output$google_auth_status <- renderText({
+    if (auth_ready() && googlesheets4::gs4_has_token()) {
+      paste("Connected as", googlesheets4::gs4_user())
+    } else {
+      "Not connected"
+    }
+  })
+
+  observeEvent(input$connect_google, {
+    tryCatch({
+      gs4_auth_user()
+      auth_ready(TRUE)
+      showNotification(
+        paste("Connected as", googlesheets4::gs4_user()),
+        type = "message",
+        duration = 5
+      )
+    }, error = function(e) {
+      auth_ready(FALSE)
+      showNotification(
+        paste("Google auth failed:", conditionMessage(e)),
+        type = "error",
+        duration = 10
+      )
+    })
+  })
+
+  output$boolean_filters_ui <- renderUI({
+    checkboxGroupInput(
+      "bool_filters",
+      label = "Features:",
+      choices = character(0),
+      selected = character(0)
+    )
+  })
 
   # ── Resolve sheet ID ────────────────────────────────────────────────────────
   # Extracts bare sheet ID from a full URL or returns the string unchanged
@@ -49,6 +83,7 @@ server <- function(input, output, session) {
 
   # ── Fetch + geocode (triggered by reload button) ─────────────────────────────
   apt_data <- eventReactive(input$reload, {
+    req(auth_ready())
     req(sheet_id())
     withProgress(message = "Loading sheet...", value = 0.2, {
       df <- fetch_sheet(sheet_id())
@@ -68,6 +103,7 @@ server <- function(input, output, session) {
 
   # ── Fetch + geocode Essentials (same reload trigger) ─────────────────────────
   essentials_data <- eventReactive(input$reload, {
+    req(auth_ready())
     req(sheet_id())
     tryCatch({
       df <- fetch_essentials(sheet_id())
@@ -95,16 +131,21 @@ server <- function(input, output, session) {
     df <- apt_data()
     if (is.null(df) || nrow(df) == 0) return(df)
 
+    bool_cols <- sheet_boolean_cols(df)
+    selected_bool_filters <- if (is.null(input$bool_filters)) character(0) else input$bool_filters
+
     # Status filter
     if (length(input$status_filter) > 0) {
       df <- df |> filter(tolower(Status) %in% tolower(input$status_filter))
     }
 
     # Boolean filters (show only TRUE when checkbox ticked)
-    if (isTRUE(input$filter_parking))   df <- df |> filter(Parking_EV == TRUE)
-    if (isTRUE(input$filter_laundry))   df <- df |> filter(Laundry    == TRUE)
-    if (isTRUE(input$filter_gym))       df <- df |> filter(Gym        == TRUE)
-    if (isTRUE(input$filter_amenities)) df <- df |> filter(Amenities  == TRUE)
+    selected_bool_cols <- intersect(selected_bool_filters, bool_cols)
+    for (col_name in selected_bool_cols) {
+      if (col_name %in% names(df)) {
+        df <- df |> filter(.data[[col_name]] %in% TRUE)
+      }
+    }
 
     # Total cost filter
     if (!is.null(input$cost_filter)) {
@@ -123,17 +164,29 @@ server <- function(input, output, session) {
 
   # ── Dynamic Status choices (update when sheet reloads) ──────────────────────
   observeEvent(apt_data(), {
-    statuses <- sort(unique(tolower(apt_data()$Status)))
+    df <- apt_data()
+    selected_bool_filters <- if (is.null(input$bool_filters)) character(0) else input$bool_filters
+
+    statuses <- sort(unique(tolower(df$Status)))
     updateSelectInput(session, "status_filter",
                       choices  = statuses,
                       selected = intersect(c("tour", "open", "msg","applied","decide"), statuses))
 
-    types <- sort(unique(tolower(trimws(apt_data()$Type))))
+    types <- sort(unique(tolower(trimws(df$Type))))
     updateSelectInput(session, "type_filter",
                       choices  = types,
                       selected = types)
 
-    cost_vals <- as.numeric(apt_data()$Ttl_Cost)
+    bool_cols <- sheet_boolean_cols(df)
+    bool_labels <- setNames(gsub("_", " ", bool_cols), bool_cols)
+    updateCheckboxGroupInput(
+      session,
+      "bool_filters",
+      choices = bool_labels,
+      selected = intersect(selected_bool_filters, bool_cols)
+    )
+
+    cost_vals <- as.numeric(df$Ttl_Cost)
     cost_vals <- cost_vals[!is.na(cost_vals)]
     if (length(cost_vals) > 0) {
       cmin <- floor(min(cost_vals) / 100) * 100
@@ -159,6 +212,7 @@ server <- function(input, output, session) {
 
   # ── Fetch + geocode Zones (same reload trigger) ─────────────────────────────
   zones_data <- eventReactive(input$reload, {
+    req(auth_ready())
     req(sheet_id())
     tryCatch({
       df <- fetch_zones(sheet_id())
@@ -194,9 +248,9 @@ server <- function(input, output, session) {
   # ── Table ────────────────────────────────────────────────────────────────────
   output$table <- renderDT({
     df <- filtered_data()
-    cols <- intersect(TABLE_COLS, names(df))
+    cols <- sheet_table_cols(df)
     df_tbl <- df[, cols, drop = FALSE]
-    bool_cols <- intersect(c("Parking_EV", "Laundry", "Gym", "Storage", "Amenities"), cols)
+    bool_cols <- cols[vapply(df_tbl, is.logical, logical(1))]
     for (col in bool_cols) {
       df_tbl[[col]] <- ifelse(df_tbl[[col]], "\u2713", "\u2717")
     }

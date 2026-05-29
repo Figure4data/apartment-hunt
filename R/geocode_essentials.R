@@ -3,8 +3,15 @@ library(googlesheets4)
 library(dplyr)
 
 #' Geocode Essentials rows with missing lat/lng and write back to sheet.
-#' Headers are at row 1, data starts at row 2.
+#' Headers are at row 3, data starts at row 4.
 geocode_essentials <- function(df, sheet_id) {
+
+  find_col <- function(df, target) {
+    nm <- names(df)
+    idx <- match(target, trimws(tolower(nm)))
+    if (is.na(idx)) return(NA_integer_)
+    idx
+  }
 
   # If lat/lng columns are absent, append them to the sheet header + data
   cols_missing <- !c("lat", "lng") %in% names(df)
@@ -21,10 +28,10 @@ geocode_essentials <- function(df, sheet_id) {
         while (n > 0) { r <- (n - 1) %% 26; s <- paste0(LETTERS[r + 1], s); n <- (n - 1) %/% 26 }
         s
       }
-      # Write header cell (row 1)
+      # Write header cell (row 3)
       range_write(sheet_id,
                   data      = data.frame(x = col),
-                  range     = paste0(col_letter, "1"),
+                  range     = paste0(col_letter, "3"),
                   sheet     = "Essentials",
                   col_names = FALSE,
                   reformat  = FALSE)
@@ -54,9 +61,16 @@ geocode_essentials <- function(df, sheet_id) {
   df$lng <- as.numeric(df$lng)
 
   col_names <- names(df)
-  # header_row = 1 for Essentials (data starts row 2)
-  lat_range <- gs4_range_col(which(col_names == "lat"), nrow(df), header_row = 1)
-  lng_range <- gs4_range_col(which(col_names == "lng"), nrow(df), header_row = 1)
+  lat_col_idx <- find_col(df, "lat")
+  lng_col_idx <- find_col(df, "lng")
+
+  if (is.na(lat_col_idx) || is.na(lng_col_idx)) {
+    stop("Essentials sheet must contain lat and lng columns.")
+  }
+
+  # header_row = 3 for Essentials (data starts row 4)
+  lat_range <- gs4_range_col(lat_col_idx, nrow(df), header_row = 3)
+  lng_range <- gs4_range_col(lng_col_idx, nrow(df), header_row = 3)
 
   range_write(sheet_id,
               data      = data.frame(lat = df$lat),

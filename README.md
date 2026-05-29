@@ -3,7 +3,7 @@ Decision support for apartment hunting — a Shiny app that reads apartment list
 
 ## What it does
 
-- **Loads listings from a Google Sheet** — authenticated via a GCP service account. The sheet URL can be overridden at runtime by pasting it into the app UI, otherwise the `SHEET_ID` environment variable is used.
+- **Loads listings from a Google Sheet** — authenticated via a user Google OAuth client. The sheet URL can be overridden at runtime by pasting it into the app UI, otherwise the `SHEET_ID` environment variable is used.
 - **Geocodes addresses automatically** — new addresses (rows where `lat`/`lng` are blank) are geocoded via OpenStreetMap using `tidygeocoder`, with ", Vancouver, BC, Canada" appended for accuracy. Results are written back to the `lat` and `lng` columns of the Google Sheet so geocoding only runs for new rows on subsequent loads.
 - **Displays an interactive leaflet map** with markers encoding:
   - **Colour** → `Status` (open=blue, tour=green, msg=amber, unavail=grey, denied=red, reject=dark red)
@@ -12,8 +12,8 @@ Decision support for apartment hunting — a Shiny app that reads apartment list
 - **Filters** in the sidebar:
   - `Status` multi-select (defaults to open/tour/msg)
   - `Type` multi-select (all types selected by default; updates dynamically from sheet values)
-  - Boolean checkboxes for `Parking_EV`, `Laundry`, `Gym`, `Amenities` (when checked, shows only TRUE rows)
-- **Summary table** below the map showing: Apartment, Status, Rent, Ttl_Cost, Parking_EV, Laundry, Gym, Storage — with column-level filtering and pagination via `DT`.
+  - Four boolean `req_1`–`req_4` checkboxes that are mapped at runtime to the boolean columns between `Ttl_Cost` and `Convenience`
+- **Summary table** below the map showing the columns present in the sheet from `Apartment` through `Convenience`, with dynamic boolean formatting and pagination via `DT`.
 
 ## Project structure
 
@@ -22,7 +22,7 @@ apartment-hunt/
 ├── ui.R                    # bslib sidebar layout and all controls
 ├── server.R                # Reactive chain: fetch → geocode → filter → render
 ├── R/
-│   ├── fetch_sheet.R       # Google Sheets auth (service account) and data read
+│   ├── fetch_sheet.R       # Google Sheets auth and data read
 │   ├── geocode_writeback.R # Incremental geocoding; writes lat/lng back to sheet
 │   └── build_map.R         # leaflet map builder (colour, shape, size, popups)
 ├── renv.lock               # Pinned R package versions
@@ -49,6 +49,7 @@ The sheet is expected to have headers at **row 8**, with at minimum the followin
 | `Gym` | Boolean — gym available |
 | `Amenities` | Boolean — other amenities present |
 | `Storage` | Storage availability |
+| `Convenience` | Sheet boundary after the boolean requirement columns |
 | `date_created` | Row creation date (used as stable key) |
 | `date_mod` | Last modified date (used to detect changed rows for re-geocoding) |
 
@@ -59,20 +60,29 @@ The sheet is expected to have headers at **row 8**, with at minimum the followin
 1. Copy `.Renviron.example` to `.Renviron` and fill in:
    ```
    SHEET_ID=<your_google_sheet_id>
-   GCP_SA_JSON=/path/to/service-account.json
+  clientID=<oauth_client_id>
+  clientSecret=<oauth_client_secret>
+  clientType=installed
    ```
+  If you created a web OAuth client instead, add `clientRedirectUris` with the exact redirect URI(s) registered in Google Cloud Console.
+  If you have multiple Google accounts cached locally, set `GARGLE_OAUTH_EMAIL` to preselect one and skip the chooser.
 2. Restore packages: `renv::restore()`
 3. Run: `shiny::runApp()`
 
-### Posit Connect Cloud (GitHub-based deployment)
+### Deployment
 
-Deployment is triggered automatically on push to `main` via a linked GitHub repo. Before deploying:
+For Posit Connect Cloud, configure a web OAuth client and set these project variables:
 
-1. In the Connect Cloud project settings → **Environment Variables**, set:
-   - `SHEET_ID` — bare Google Sheet ID
-   - `GCP_SA_JSON` — contents of the service account JSON as a **single-line string**
-2. Ensure `manifest.json` is up to date: `rsconnect::writeManifest()`
-3. The service account requires read/write access to the Google Sheet (`spreadsheets` scope — not readonly, as the app writes geocoded coordinates back).
+```text
+clientType=web
+clientID=<web_oauth_client_id>
+clientSecret=<web_oauth_client_secret>
+clientRedirectUris=<connect_cloud_redirect_uri>
+```
+
+The redirect URI must match the one registered in Google Cloud Console for the web client. Each viewer authenticates once per session, and the token is reused for all sheet reads and writes during that session.
+
+The Google Sheet must be shared with the Google account used for auth.
 
 ## Dependencies
 

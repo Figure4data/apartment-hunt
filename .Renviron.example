@@ -1,10 +1,19 @@
 # Google Sheet ID (used when no URL is pasted in the app UI)
 SHEET_ID=your_sheet_id_here
 
-# Service account JSON — either a file path or the raw JSON string contents
-# File path example:
-#   GCP_SA_JSON=/Users/you/.config/gcp/apartment-hunt-sa.json
-# Raw JSON string example (Connect Cloud) — must include the outer { } braces,
-# be on a single line, and have no surrounding quotes:
-#   GCP_SA_JSON={"type":"service_account","project_id":"...","private_key":"..."}
-GCP_SA_JSON=
+# Local development: desktop / installed OAuth client
+clientType=installed
+clientID=
+clientSecret=
+
+# Optional: preselect one Google account and avoid the chooser dialog
+# when multiple cached accounts exist.
+# GARGLE_OAUTH_EMAIL=you@example.com
+
+# Posit Connect Cloud production: web OAuth client
+# clientType=web
+# clientID=your_web_oauth_client_id
+# clientSecret=your_web_oauth_client_secret
+# clientRedirectUris=https://<your-connect-domain>/
+# If your GCP app requires an explicit callback path, use the exact URI
+# registered in Google Cloud Console.

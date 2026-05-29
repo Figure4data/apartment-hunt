@@ -8,7 +8,6 @@ library(dplyr)
 #' @param sheet_id  Google Sheet ID string.
 #' @return Data frame with zone corner strings and (possibly blank) lat/lng columns.
 fetch_zones <- function(sheet_id) {
-  gs4_auth_sa()  # reuse auth from fetch_sheet.R
   df <- read_sheet(sheet_id, sheet = "Zones", skip = 1, col_names = TRUE)
   df <- as.data.frame(df)
 
