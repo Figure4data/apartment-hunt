@@ -84,7 +84,7 @@ The redirect URI must match the one registered in Google Cloud Console for the w
 
 The Google Sheet must be shared with the Google account used for auth.
 
-If Connect Cloud still reports that it cannot get Google credentials, add a secret variable named `GS4_OAUTH_TOKEN_B64` containing a base64-encoded serialized OAuth token. This is the noninteractive fallback used by the app when a browser flow is not available.
+If Connect Cloud still reports that it cannot get Google credentials, add a secret variable named `GS4_OAUTH_TOKEN_B64` containing a base64-encoded serialized OAuth token. If the value is too long for one field, split it across numbered secret variables such as `GS4_OAUTH_TOKEN_B64_1`, `GS4_OAUTH_TOKEN_B64_2`, and so on. The app concatenates those chunks in order.
 
 To create that value locally, authenticate once, then serialize the token object and base64-encode it before pasting it into Connect Cloud as a secret variable.
 

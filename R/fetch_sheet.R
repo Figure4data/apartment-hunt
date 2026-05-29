@@ -2,8 +2,39 @@ library(googlesheets4)
 library(dplyr)
 
 decode_oauth_token <- function(x) {
-  raw <- base64enc::base64decode(x)
-  unserialize(raw)
+  tryCatch(
+    {
+      raw <- base64enc::base64decode(x)
+      unserialize(raw)
+    },
+    error = function(e) {
+      stop(
+        paste(
+          "Failed to decode GS4_OAUTH_TOKEN_B64.",
+          "Recreate it from a successfully authenticated local session.",
+          "Make sure the value was pasted as a single line with no quotes or truncation.",
+          conditionMessage(e)
+        ),
+        call. = FALSE
+      )
+    }
+  )
+}
+
+get_env_chunked <- function(prefix) {
+  single <- trimws(Sys.getenv(prefix, unset = ""))
+  if (nchar(single) > 0) return(single)
+
+  chunks <- character()
+  for (i in seq_len(1000)) {
+    value <- trimws(Sys.getenv(sprintf("%s_%d", prefix, i), unset = ""))
+    if (nchar(value) == 0) {
+      if (i == 1) return("")
+      break
+    }
+    chunks <- c(chunks, value)
+  }
+  paste(chunks, collapse = "")
 }
 
 sheet_cols_between <- function(df, start_col, end_col = NULL) {
@@ -78,7 +109,7 @@ gs4_auth_user <- function() {
   client_type <- tolower(trimws(Sys.getenv("clientType", unset = "installed")))
   redirect_uris_raw <- trimws(Sys.getenv("clientRedirectUris"))
   oauth_email <- trimws(Sys.getenv("GARGLE_OAUTH_EMAIL", unset = ""))
-  oauth_token_b64 <- trimws(Sys.getenv("GS4_OAUTH_TOKEN_B64", unset = ""))
+  oauth_token_b64 <- get_env_chunked("GS4_OAUTH_TOKEN_B64")
 
   if (nchar(client_id) == 0 || nchar(client_secret) == 0) {
     stop("clientID and clientSecret must be set in .Renviron.")

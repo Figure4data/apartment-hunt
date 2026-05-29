@@ -21,3 +21,6 @@ clientSecret=
 # Optional: noninteractive fallback for Connect Cloud
 # Store a base64-encoded serialized OAuth token as a secret variable.
 # GS4_OAUTH_TOKEN_B64=
+# If the token is too long, split it into numbered chunks:
+# GS4_OAUTH_TOKEN_B64_1=
+# GS4_OAUTH_TOKEN_B64_2=
