@@ -17,3 +17,7 @@ clientSecret=
 # clientRedirectUris=https://<your-connect-domain>/
 # If your GCP app requires an explicit callback path, use the exact URI
 # registered in Google Cloud Console.
+
+# Optional: noninteractive fallback for Connect Cloud
+# Store a base64-encoded serialized OAuth token as a secret variable.
+# GS4_OAUTH_TOKEN_B64=

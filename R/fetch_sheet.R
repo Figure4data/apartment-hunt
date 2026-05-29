@@ -1,6 +1,11 @@
 library(googlesheets4)
 library(dplyr)
 
+decode_oauth_token <- function(x) {
+  raw <- base64enc::base64decode(x)
+  unserialize(raw)
+}
+
 sheet_cols_between <- function(df, start_col, end_col = NULL) {
   nm <- names(df)
   if (is.null(nm) || length(nm) == 0) return(character())
@@ -73,6 +78,7 @@ gs4_auth_user <- function() {
   client_type <- tolower(trimws(Sys.getenv("clientType", unset = "installed")))
   redirect_uris_raw <- trimws(Sys.getenv("clientRedirectUris"))
   oauth_email <- trimws(Sys.getenv("GARGLE_OAUTH_EMAIL", unset = ""))
+  oauth_token_b64 <- trimws(Sys.getenv("GS4_OAUTH_TOKEN_B64", unset = ""))
 
   if (nchar(client_id) == 0 || nchar(client_secret) == 0) {
     stop("clientID and clientSecret must be set in .Renviron.")
@@ -99,6 +105,21 @@ gs4_auth_user <- function() {
   )
 
   gs4_auth_configure(client = client)
+
+  if (nchar(oauth_token_b64) > 0) {
+    gs4_auth(token = decode_oauth_token(oauth_token_b64))
+    return(invisible(TRUE))
+  }
+
+  if (!interactive()) {
+    stop(
+      paste(
+        "No noninteractive Google token is available.",
+        "Set GS4_OAUTH_TOKEN_B64 as a Connect Cloud secret variable,",
+        "or authenticate interactively once so a cached token can be discovered."
+      )
+    )
+  }
 
   if (nchar(oauth_email) > 0) {
     gs4_auth(email = oauth_email)

@@ -17,3 +17,6 @@ renv/sandbox/
 # OS
 .DS_Store
 Thumbs.db
+
+# auth setup for google
+/auth/
