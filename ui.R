@@ -33,15 +33,16 @@ ui <- page_sidebar(
         label = NULL,
         placeholder = "Paste Sheet URL or sheet ID (optional)"
       ),
-      actionButton(
-        "connect_google",
-        "Connect Google Account",
-        icon = icon("google"),
-        class = "btn-outline-primary w-100 mb-2"
+      conditionalPanel(
+        condition = "!output.public_link_mode",
+        actionButton(
+          "connect_google",
+          "Connect Google Account",
+          icon = icon("google"),
+          class = "btn-outline-primary w-100 mb-2"
+        )
       ),
-      textOutput(
-        "google_auth_status"
-      ),
+      textOutput("google_auth_status"),
       actionButton("reload", "Load / Reload", icon = icon("rotate"),
                    class = "btn-primary w-100")
     ),

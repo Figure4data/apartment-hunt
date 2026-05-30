@@ -1,6 +1,10 @@
 library(googlesheets4)
 library(dplyr)
 
+use_public_link_mode <- function() {
+  tolower(trimws(Sys.getenv("PUBLIC_LINK_MODE", unset = "false"))) %in% c("1", "true", "yes", "y")
+}
+
 decode_oauth_token <- function(x) {
   tryCatch(
     {
@@ -104,6 +108,11 @@ sheet_as_flag <- function(x) {
 #' If `GARGLE_OAUTH_EMAIL` is set, it will be used to preselect a cached Google
 #' account and avoid the account chooser when multiple identities are available.
 gs4_auth_user <- function() {
+  if (use_public_link_mode()) {
+    googlesheets4::gs4_deauth()
+    return(invisible(TRUE))
+  }
+
   client_id <- trimws(Sys.getenv("clientID"))
   client_secret <- trimws(Sys.getenv("clientSecret"))
   client_type <- tolower(trimws(Sys.getenv("clientType", unset = "installed")))

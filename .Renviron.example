@@ -1,6 +1,10 @@
 # Google Sheet ID (used when no URL is pasted in the app UI)
 SHEET_ID=your_sheet_id_here
 
+# Set to true to run in public-link mode (no Google OAuth in app).
+# The target sheet/tab must be shared appropriately for public reading.
+# PUBLIC_LINK_MODE=true
+
 # Local development: desktop / installed OAuth client
 clientType=installed
 clientID=

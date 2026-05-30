@@ -3,8 +3,8 @@ Decision support for apartment hunting — a Shiny app that reads apartment list
 
 ## What it does
 
-- **Loads listings from a Google Sheet** — authenticated via a user Google OAuth client. The sheet URL can be overridden at runtime by pasting it into the app UI, otherwise the `SHEET_ID` environment variable is used.
-- **Geocodes addresses automatically** — new addresses (rows where `lat`/`lng` are blank) are geocoded via OpenStreetMap using `tidygeocoder`, with ", Vancouver, BC, Canada" appended for accuracy. Results are written back to the `lat` and `lng` columns of the Google Sheet so geocoding only runs for new rows on subsequent loads.
+- **Loads listings from a Google Sheet** — in public-link mode (recommended for Connect Cloud), no Google login is required in the app. The sheet URL can be overridden at runtime by pasting it into the app UI, otherwise the `SHEET_ID` environment variable is used.
+- **Geocodes addresses automatically** — in authenticated mode, new addresses (rows where `lat`/`lng` are blank) are geocoded via OpenStreetMap using `tidygeocoder`, with ", Vancouver, BC, Canada" appended for accuracy, then written back to Google Sheets. In public-link mode, writeback is disabled.
 - **Displays an interactive leaflet map** with markers encoding:
   - **Colour** → `Status` (open=blue, tour=green, msg=amber, unavail=grey, denied=red, reject=dark red)
   - **Shape** → `Type` (studio=solid filled circle, 1 bdrm=hollow ring)
@@ -71,22 +71,15 @@ The sheet is expected to have headers at **row 8**, with at minimum the followin
 
 ### Deployment
 
-For Posit Connect Cloud, configure a web OAuth client and set these project variables:
+For Posit Connect Cloud, use public-link mode and set these project variables:
 
 ```text
-clientType=web
-clientID=<web_oauth_client_id>
-clientSecret=<web_oauth_client_secret>
-clientRedirectUris=<connect_cloud_redirect_uri>
+PUBLIC_LINK_MODE=true
+SHEET_ID=<google_sheet_id>
+SHEET_NAME=<tab_name_optional>
 ```
 
-The redirect URI must match the one registered in Google Cloud Console for the web client. Each viewer authenticates once per session, and the token is reused for all sheet reads and writes during that session.
-
-The Google Sheet must be shared with the Google account used for auth.
-
-If Connect Cloud still reports that it cannot get Google credentials, add a secret variable named `GS4_OAUTH_TOKEN_B64` containing a base64-encoded serialized OAuth token. If the value is too long for one field, split it across numbered secret variables such as `GS4_OAUTH_TOKEN_B64_1`, `GS4_OAUTH_TOKEN_B64_2`, and so on. The app concatenates those chunks in order.
-
-To create that value locally, authenticate once, then serialize the token object and base64-encode it before pasting it into Connect Cloud as a secret variable.
+In this mode, the app reads sheets without user OAuth and skips writeback operations. Ensure the target sheets are shared for reading by link.
 
 ## Dependencies
 

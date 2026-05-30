@@ -12,17 +12,33 @@ source("R/build_map.R")
 
 server <- function(input, output, session) {
 
-  auth_ready <- reactiveVal(googlesheets4::gs4_has_token())
+  public_mode <- use_public_link_mode()
+  auth_ready <- reactiveVal(public_mode || googlesheets4::gs4_has_token())
 
   output$google_auth_status <- renderText({
+    if (public_mode) {
+      return("Public-link mode (no Google login)")
+    }
     if (auth_ready() && googlesheets4::gs4_has_token()) {
       paste("Connected as", googlesheets4::gs4_user())
     } else {
       "Not connected"
     }
   })
+  output$public_link_mode <- reactive({ public_mode })
+  outputOptions(output, "public_link_mode", suspendWhenHidden = FALSE)
 
   observeEvent(input$connect_google, {
+    if (public_mode) {
+      auth_ready(TRUE)
+      showNotification(
+        "Public-link mode enabled. Google login is not required.",
+        type = "message",
+        duration = 5
+      )
+      return()
+    }
+
     tryCatch({
       gs4_auth_user()
       auth_ready(TRUE)
@@ -87,15 +103,17 @@ server <- function(input, output, session) {
     req(sheet_id())
     withProgress(message = "Loading sheet...", value = 0.2, {
       df <- fetch_sheet(sheet_id())
-      setProgress(0.5, message = "Geocoding new addresses...")
-      df <- tryCatch(
-        geocode_writeback(df, sheet_id()),
-        error = function(e) {
-          showNotification(paste("Geocoding error:", conditionMessage(e)),
-                           type = "warning", duration = 10)
-          df  # return df without geocoded coords rather than crashing
-        }
-      )
+      if (!public_mode) {
+        setProgress(0.5, message = "Geocoding new addresses...")
+        df <- tryCatch(
+          geocode_writeback(df, sheet_id()),
+          error = function(e) {
+            showNotification(paste("Geocoding error:", conditionMessage(e)),
+                             type = "warning", duration = 10)
+            df
+          }
+        )
+      }
       setProgress(1, message = "Done")
       df
     })
@@ -111,14 +129,18 @@ server <- function(input, output, session) {
         showNotification("Essentials sheet loaded but has no rows.", type = "warning")
         return(NULL)
       }
-      tryCatch(
-        geocode_essentials(df, sheet_id()),
-        error = function(e) {
-          showNotification(paste("Essentials geocoding error:", conditionMessage(e)),
-                           type = "warning", duration = 15)
-          df
-        }
-      )
+      if (public_mode) {
+        df
+      } else {
+        tryCatch(
+          geocode_essentials(df, sheet_id()),
+          error = function(e) {
+            showNotification(paste("Essentials geocoding error:", conditionMessage(e)),
+                             type = "warning", duration = 15)
+            df
+          }
+        )
+      }
     }, error = function(e) {
       showNotification(paste("Could not load Essentials sheet:", conditionMessage(e)),
                        type = "warning", duration = 15)
@@ -217,14 +239,18 @@ server <- function(input, output, session) {
     tryCatch({
       df <- fetch_zones(sheet_id())
       if (is.null(df) || nrow(df) == 0) return(NULL)
-      tryCatch(
-        geocode_zones(df, sheet_id()),
-        error = function(e) {
-          showNotification(paste("Zone geocoding error:", conditionMessage(e)),
-                           type = "warning", duration = 15)
-          df
-        }
-      )
+      if (public_mode) {
+        df
+      } else {
+        tryCatch(
+          geocode_zones(df, sheet_id()),
+          error = function(e) {
+            showNotification(paste("Zone geocoding error:", conditionMessage(e)),
+                             type = "warning", duration = 15)
+            df
+          }
+        )
+      }
     }, error = function(e) {
       showNotification(paste("Could not load Zones sheet:", conditionMessage(e)),
                        type = "warning", duration = 15)
