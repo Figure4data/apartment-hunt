@@ -138,24 +138,23 @@ gs4_auth_user <- function() {
   gs4_auth_configure(client = client)
 
   if (nchar(oauth_token_b64) > 0) {
-    gs4_auth(token = decode_oauth_token(oauth_token_b64))
-    return(invisible(TRUE))
+    token <- tryCatch(
+      decode_oauth_token(oauth_token_b64),
+      error = function(e) NULL
+    )
+    if (!is.null(token)) {
+      gs4_auth(token = token)
+      return(invisible(TRUE))
+    }
   }
 
-  if (!interactive()) {
-    stop(
-      paste(
-        "No noninteractive Google token is available.",
-        "Set GS4_OAUTH_TOKEN_B64 as a Connect Cloud secret variable,",
-        "or authenticate interactively once so a cached token can be discovered."
-      )
-    )
-  }
+  use_oob <- if (identical(client_type, "web")) FALSE else gargle::gargle_oob_default()
+  email_arg <- if (nchar(oauth_email) > 0) oauth_email else TRUE
 
   if (nchar(oauth_email) > 0) {
-    gs4_auth(email = oauth_email)
+    gs4_auth(email = oauth_email, use_oob = use_oob, cache = FALSE)
   } else {
-    gs4_auth()
+    gs4_auth(email = email_arg, use_oob = use_oob, cache = FALSE)
   }
 }
 
