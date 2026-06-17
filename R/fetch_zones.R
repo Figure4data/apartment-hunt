@@ -12,7 +12,7 @@ fetch_zones <- function(sheet_id) {
     googlesheets4::gs4_deauth()
   }
 
-  df <- read_sheet(sheet_id, sheet = "Zones", skip = 1, col_names = TRUE)
+  df <- read_sheet(sheet_id, sheet = "Zones", skip = 2, col_names = TRUE)
   df <- as.data.frame(df)
 
   # Coerce lat/lng columns to numeric if present
