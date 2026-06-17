@@ -28,6 +28,21 @@ ui <- page_sidebar(
     # --- Sheet connection ---
     card(
       card_header("Google Sheet", class = "bg-light fw-semibold"),
+      {
+        template_url <- trimws(Sys.getenv("TEMPLATE_SHEET_URL", unset = ""))
+        template_label <- trimws(Sys.getenv("TEMPLATE_SHEET_LABEL", unset = "Get Template Sheet"))
+        if (nchar(template_url) > 0) {
+          tags$p(
+            tags$a(
+              href = template_url,
+              target = "_blank",
+              rel = "noopener noreferrer",
+              template_label
+            ),
+            style = "margin: 0 0 0.1rem 0; text-align: center; font-size: 0.86rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;"
+          )
+        }
+      },
       textInput(
         "sheet_url",
         label = NULL,

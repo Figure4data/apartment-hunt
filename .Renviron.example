@@ -2,6 +2,10 @@
 SHEET_ID=your_sheet_id_here
 SHEET_NAME=sheet_with_listings
 
+# Optional: public template sheet link shown in the sidebar
+# TEMPLATE_SHEET_URL=https://docs.google.com/spreadsheets/d/<template_id>/copy
+# TEMPLATE_SHEET_LABEL=Get Template Sheet
+
 # Service-account mode for real-time writeback in hosted deployments.
 # When true, app authenticates using GCP_SA_JSON and users must share
 # their sheets with SERVICE_ACCOUNT_EMAIL (Editor access).

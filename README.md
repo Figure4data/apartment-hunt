@@ -1,9 +1,12 @@
 # apartment-hunt
 Decision support for apartment hunting — a Shiny app that reads apartment listings from a Google Sheet, geocodes addresses, and displays them on an interactive map with filtering and colour/shape encoding based on listing attributes.
 
+Published on Posit Connect Cloud.
+
 ## What it does
 
 - **Loads listings from a Google Sheet** — in public-link mode (recommended for Connect Cloud), no Google login is required in the app. The sheet URL can be overridden at runtime by pasting it into the app UI, otherwise the `SHEET_ID` environment variable is used.
+- **Template onboarding link** — optionally show a "Get Template Sheet" link in the sidebar by setting `TEMPLATE_SHEET_URL` (and optional `TEMPLATE_SHEET_LABEL`).
 - **Geocodes addresses automatically** — in authenticated mode, new addresses (rows where `lat`/`lng` are blank) are geocoded via OpenStreetMap using `tidygeocoder`, with ", Vancouver, BC, Canada" appended for accuracy, then written back to Google Sheets. In public-link mode, writeback is disabled.
 - **Displays an interactive leaflet map** with markers encoding:
   - **Colour** → `Status` (open=blue, tour=green, msg=amber, unavail=grey, denied=red, reject=dark red)
