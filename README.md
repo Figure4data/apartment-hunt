@@ -1,7 +1,7 @@
-# apartment-hunt
-Decision support for apartment hunting — a Shiny app that reads apartment listings from a Google Sheet, geocodes addresses, and displays them on an interactive map with filtering and colour/shape encoding based on listing attributes.
+# Apartment Hunter app
+Decision support for apartment hunting — a Shiny web app that reads apartment listings from a Google Sheet, geocodes addresses, and displays them on an interactive map with filtering and colour/shape encoding based on listing attributes.
 
-Published on Posit Connect Cloud.
+Published on Posit Connect Cloud. [go.fig4.com/apt-hunt]
 
 ## What it does
 
