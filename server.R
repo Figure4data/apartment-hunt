@@ -117,7 +117,6 @@ server <- function(input, output, session) {
     }
     raw <- Sys.getenv("SHEET_ID")
     if (nchar(raw) == 0) {
-      showNotification("No SHEET_ID env var set and no URL provided.", type = "error")
       return(NULL)
     }
     id <- extract_id(raw)
