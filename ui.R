@@ -20,6 +20,7 @@ ui <- page_sidebar(
     .navbar { min-height: 72px !important; padding-top: 0.6rem !important; padding-bottom: 0.6rem !important; }
     .navbar .navbar-brand, .navbar .navbar-brand * { font-size: 1.6rem !important; line-height: 1.2 !important; }
     .navbar-brand svg { width: 1.4em !important; height: 1.4em !important; vertical-align: middle !important; }
+    #sheet_url { background-color: #fff9c4 !important; }
   "))),
   sidebar = sidebar(
     width = 280,
@@ -31,14 +32,40 @@ ui <- page_sidebar(
       {
         template_url <- trimws(Sys.getenv("TEMPLATE_SHEET_URL", unset = ""))
         template_label <- trimws(Sys.getenv("TEMPLATE_SHEET_LABEL", unset = "Get Template Sheet"))
-        if (nchar(template_url) > 0) {
+        demo_url <- trimws(Sys.getenv("DEMO_SHEET_URL", unset = ""))
+        demo_label <- trimws(Sys.getenv("DEMO_SHEET_LABEL", unset = "Demo"))
+
+        if (nchar(template_url) > 0 || nchar(demo_url) > 0) {
+          link_nodes <- list()
+
+          if (nchar(template_url) > 0) {
+            link_nodes <- append(link_nodes, list(
+              tags$a(
+                href = template_url,
+                target = "_blank",
+                rel = "noopener noreferrer",
+                template_label
+              )
+            ))
+          }
+
+          if (nchar(template_url) > 0 && nchar(demo_url) > 0) {
+            link_nodes <- append(link_nodes, list(tags$span(HTML("&nbsp;&nbsp;"))))
+          }
+
+          if (nchar(demo_url) > 0) {
+            link_nodes <- append(link_nodes, list(
+              tags$a(
+                href = demo_url,
+                target = "_blank",
+                rel = "noopener noreferrer",
+                demo_label
+              )
+            ))
+          }
+
           tags$p(
-            tags$a(
-              href = template_url,
-              target = "_blank",
-              rel = "noopener noreferrer",
-              template_label
-            ),
+            link_nodes,
             style = "margin: 0 0 0.1rem 0; text-align: center; font-size: 0.86rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;"
           )
         }
@@ -46,7 +73,7 @@ ui <- page_sidebar(
       textInput(
         "sheet_url",
         label = NULL,
-        placeholder = "Paste Sheet URL or sheet ID (optional)"
+        placeholder = "Paste Sheet URL or sheet ID"
       ),
       uiOutput("auth_controls_ui"),
       tags$div(
@@ -130,7 +157,7 @@ ui <- page_sidebar(
 
     card(
       full_screen = TRUE,
-      card_header("Map", class = "bg-primary text-white"),
+      card_header("Map (if blank: paste Google Sheets URL in box at left or use Demo link)", class = "bg-primary text-white"),
       leafletOutput("map")
     ),
 
